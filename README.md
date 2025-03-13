@@ -17,15 +17,9 @@ Why KarPropertyManager?
 ## Usage Example
 
 ```kotlin
-val kmp = remember(context, scope) { KarPropertyManager(context, scope) }
-LaunchedEffect(kmp) {
-    kmp.startObservingCar()
-}
-val speedFlow = remember(kmp) {
-    kmp.flowOfProperty<Float>(VehiclePropertyIds.PERF_VEHICLE_SPEED, 0, 0.5F)
-        .stateIn(scope, SharingStarted.Eagerly, 0.0F)
-}
-val speed by speedFlow.collectAsState()
+val kmp = KarPropertyManager(context, scope)
+kmp.startObservingCar()
+val speedFlow = kmp.flowOfProperty<Float>(VehiclePropertyIds.PERF_VEHICLE_SPEED, 0, 0.5F)
 ```
 
 ## Declare dependencies
@@ -52,12 +46,11 @@ We use [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## Permissions
 
-KarPropertyManager permission model does not differ from CarPropertyManager.
+Depending on the properties, different permissions may need to be obtained.
 
-We recommend the following documentation resources:
+For standard Google Vehicle Properties, use [documentation provided by google](https://developer.android.com/reference/android/car/VehiclePropertyIds).
 
-* https://developer.android.com/guide/topics/permissions/overview
-* https://developer.android.com/training/permissions/usage-notes
+For `VENDOR` properties defined by OEMs, refer to their respective documentation.
 
 ## Where to get help
 
@@ -78,4 +71,3 @@ Contributions are welcome, simply create a [pull request](./pulls).
 ## Maintainers
 
 Paradox Cat GmbH - https://paradoxcat.com
-
