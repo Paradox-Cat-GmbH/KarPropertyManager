@@ -37,6 +37,8 @@ android {
     buildFeatures {
         compose = true
     }
+    useLibrary("android.car", required = false)
+    packaging { resources.excludes.add("META-INF/*") }
 }
 
 dependencies {
