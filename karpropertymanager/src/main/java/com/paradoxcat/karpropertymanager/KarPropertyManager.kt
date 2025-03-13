@@ -17,6 +17,7 @@ import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
@@ -25,6 +26,7 @@ import kotlinx.coroutines.flow.shareIn
 import kotlinx.coroutines.launch
 import java.util.concurrent.atomic.AtomicBoolean
 
+enum class CarStatus{ CONNECTED, DISCONNECTED }
 @Suppress("unused")
 @OptIn(ExperimentalCoroutinesApi::class)
 class KarPropertyManager(
@@ -35,6 +37,9 @@ class KarPropertyManager(
         const val TAG = "KarPropertyManager"
         const val CAR_TIMEOUT_MS = 10000L
     }
+
+    private val carStatusFlowInternal = MutableStateFlow(CarStatus.DISCONNECTED)
+    val carStatusFlow = carStatusFlowInternal.asStateFlow()
 
     private val carFlow = MutableStateFlow<Car?>(null)
     private val carPropertyManagerFlow = carFlow
@@ -53,12 +58,14 @@ class KarPropertyManager(
             ) { car, ready ->
                 if (!ready) {
                     Log.w(TAG, "Car is no longer ready, setting to null")
+                    carStatusFlowInternal.value = CarStatus.DISCONNECTED
                     carFlow.value = null
                     return@createCar
                 }
 
                 Log.d(TAG, "Car is ready, pushing it further")
                 carFlow.value = car
+                carStatusFlowInternal.value = CarStatus.CONNECTED
             }
         } else {
             scope.launch {
@@ -90,6 +97,7 @@ class KarPropertyManager(
                     }
                 }.collect {
                     carFlow.value = it
+                    carStatusFlowInternal.value =  if (it != null) CarStatus.CONNECTED else CarStatus.DISCONNECTED
                 }
             }
         }
