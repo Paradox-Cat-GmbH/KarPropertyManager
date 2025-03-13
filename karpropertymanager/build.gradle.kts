@@ -54,6 +54,30 @@ publishing {
             artifactId = "karpropertymanager"
             version = libVersion
 
+            pom {
+                name = "KarPropertyManager"
+                description = "Car property manager"
+                url = "https://github.com/Paradox-Cat-GmbH/KarPropertyManager/"
+                licenses {
+                    license {
+                        name = "GNU Lesser General Public License v3.0"
+                        url = "https://github.com/Slion/Preference/"
+                    }
+                }
+                developers {
+                    developer {
+                        id = "tauqir1"
+                        name = "Mohammad Ansari"
+                        email = "mohammad.ansari@paradoxcat.com"
+                    }
+                }
+                scm {
+                    //connection = "scm:git:git://example.com/my-library.git"
+                    //developerConnection = "scm:git:ssh://example.com/my-library.git"
+                    url = "https://github.com/Paradox-Cat-GmbH/KarPropertyManager/"
+                }
+            }
+
             afterEvaluate {
                 from(components["release"])
             }
@@ -98,7 +122,6 @@ tasks.register<Zip>("generateUploadPackage") {
         (it.file.isFile && !it.path.contains(libVersion))
     }
 
-    into("karpropertymanager")
     // Name of zip file
-    archiveFileName.set("karpropertymanager.zip")
+    archiveFileName.set("tauqir1.zip")
 }
