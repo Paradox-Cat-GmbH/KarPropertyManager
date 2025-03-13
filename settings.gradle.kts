@@ -21,3 +21,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "KarPropertyManager"
 include(":karpropertymanager")
+include(":sample-app")
