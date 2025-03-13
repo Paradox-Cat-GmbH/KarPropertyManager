@@ -2,7 +2,11 @@ package com.paradoxcat.karpropertymanager
 
 import android.car.Car
 import android.car.hardware.CarPropertyValue
+import android.car.hardware.property.CarInternalErrorException
 import android.car.hardware.property.CarPropertyManager
+import android.car.hardware.property.PropertyAccessDeniedSecurityException
+import android.car.hardware.property.PropertyNotAvailableAndRetryException
+import android.car.hardware.property.PropertyNotAvailableException
 import android.content.ComponentName
 import android.content.Context
 import android.content.ServiceConnection
@@ -28,6 +32,8 @@ import kotlinx.coroutines.flow.shareIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 import java.util.concurrent.atomic.AtomicBoolean
+
+class KarPropertyManagerException(override val cause: Exception): Exception(cause = cause)
 
 enum class CarStatus{ CONNECTED, DISCONNECTED }
 @Suppress("unused")
@@ -93,7 +99,12 @@ class KarPropertyManager(
                             trySend(null)
                             if (!stop.get()) {
                                 @Suppress("DEPRECATION")
-                                car.connect()
+                                try {
+                                    car.connect()
+                                } catch (e: IllegalArgumentException) {
+                                    Log.e(TAG, "Exception during connect", e)
+                                }
+
                             }
                         }
                     }
@@ -110,7 +121,11 @@ class KarPropertyManager(
                         Log.d(TAG, "car is not connected, connecting")
 
                         @Suppress("DEPRECATION")
-                        serviceConnection.car.connect()
+                        try {
+                            serviceConnection.car.connect()
+                        } catch (e: IllegalArgumentException) {
+                            Log.e(TAG, "Exception during connect", e)
+                        }
                     }
 
                     awaitClose {
@@ -133,12 +148,26 @@ class KarPropertyManager(
      * @param   areaId      vehicle area type for property
      * @param   timeout     timeout, default 10 seconds
      *
+     * @throws KarPropertyManagerException
+     *
      * @return  value of a property or null on a timeout
      */
     suspend fun <T> getProperty(propertyId: Int, areaId: Int, timeout: Long = CAR_PROPERTY_TIMEOUT_MS): T? {
         return withTimeoutOrNull(timeout) {
             val carPropertyManager = carPropertyManagerFlow.filterNotNull().first()
-            carPropertyManager.getProperty<T>(propertyId, areaId)?.value
+            try {
+                carPropertyManager.getProperty<T>(propertyId, areaId)?.value
+            } catch (e: CarInternalErrorException) {
+                throw KarPropertyManagerException(e)
+            } catch (e: PropertyAccessDeniedSecurityException) {
+                throw KarPropertyManagerException(e)
+            } catch (e: PropertyNotAvailableAndRetryException) {
+                throw KarPropertyManagerException(e)
+            } catch (e: PropertyNotAvailableException) {
+                throw KarPropertyManagerException(e)
+            } catch (e: IllegalArgumentException) {
+                throw KarPropertyManagerException(e)
+            }
         }
     }
 
@@ -148,6 +177,12 @@ class KarPropertyManager(
      * @param   propertyId      Id of a property
      * @param   areaId          vehicle area type for property
      * @param   updateRateHz    property update rate
+     *
+     * @throws SecurityException if the caller does not have read permission to the properties
+     * registered for this callback
+     * @throws KarPropertyManagerException if there are overlapping areaIds or the executor is
+     * registered to another callback or one of the properties are
+     * not supported.
      *
      * @return  flow of property values
      */
@@ -198,12 +233,16 @@ class KarPropertyManager(
         listener: CarPropertyManager.CarPropertyEventCallback
     ) {
         if (Build.VERSION.SDK_INT >= 35) {
-            subscribePropertyEvents(
-                propertyId,
-                areaId,
-                updateRateHz,
-                listener,
-            )
+            try {
+                subscribePropertyEvents(
+                    propertyId,
+                    areaId,
+                    updateRateHz,
+                    listener,
+                )
+            } catch (e: IllegalArgumentException) {
+                throw KarPropertyManagerException(e)
+            }
         } else {
             @Suppress("DEPRECATION")
             registerCallback(
