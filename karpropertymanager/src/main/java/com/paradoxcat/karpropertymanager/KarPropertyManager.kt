@@ -52,6 +52,10 @@ class KarPropertyManager(
         }
         .shareIn(scope, SharingStarted.Lazily)
 
+    /**
+     * Starts observing the Car Service. No values from other methods
+     * will be returned unless this method is called beforehand.
+     */
     fun startObservingCar() {
         if (Build.VERSION.SDK_INT >= 30) {
             Log.d(TAG, "startObservingCar: Current route.")
@@ -121,6 +125,16 @@ class KarPropertyManager(
         }
     }
 
+    /**
+     * Returns a single property value or null on a timeout. Uses property Ids from
+     * [@link android.car.VehiclePropertyIds VehiclePropertyIds]
+     *
+     * @param   propertyId  Id of a property
+     * @param   areaId      vehicle area type for property
+     * @param   timeout     timeout, default 10 seconds
+     *
+     * @return  value of a property or null on a timeout
+     */
     suspend fun <T> getProperty(propertyId: Int, areaId: Int, timeout: Long = CAR_PROPERTY_TIMEOUT_MS): T? {
         return withTimeoutOrNull(timeout) {
             val carPropertyManager = carPropertyManagerFlow.filterNotNull().first()
@@ -128,6 +142,15 @@ class KarPropertyManager(
         }
     }
 
+    /**
+     * Returns flow of the property values. Uses property Ids from VehiclePropertyIds
+     *
+     * @param   propertyId      Id of a property
+     * @param   areaId          vehicle area type for property
+     * @param   updateRateHz    property update rate
+     *
+     * @return  flow of property values
+     */
     @Suppress("UNCHECKED_CAST")
     fun <T> flowOfProperty(propertyId: Int, areaId: Int, updateRateHz: Float): Flow<T> =
         carPropertyManagerFlow.flatMapLatest { carPropertyManager ->
