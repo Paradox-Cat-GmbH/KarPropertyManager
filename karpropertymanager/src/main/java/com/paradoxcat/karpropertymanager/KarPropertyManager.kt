@@ -88,8 +88,17 @@ class KarPropertyManager(
                             }
                         }
                     }
-
+                    Log.d(TAG, "creating car")
                     serviceConnection.car = Car.createCar(context, serviceConnection)
+
+                    Log.d(TAG, "car is created and is connected: ${serviceConnection.car.isConnected}")
+
+                    if (serviceConnection.car.isConnected) {
+                        trySend(serviceConnection.car)
+                    } else {
+                        Log.d(TAG, "car is not connected, connecting")
+                        serviceConnection.car.connect()
+                    }
 
                     awaitClose {
                         serviceConnection.stop.set(true)
