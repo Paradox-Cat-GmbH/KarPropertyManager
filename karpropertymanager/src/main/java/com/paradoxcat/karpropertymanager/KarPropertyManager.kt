@@ -19,11 +19,14 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.shareIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 import java.util.concurrent.atomic.AtomicBoolean
 
 enum class CarStatus{ CONNECTED, DISCONNECTED }
@@ -36,6 +39,7 @@ class KarPropertyManager(
     companion object {
         const val TAG = "KarPropertyManager"
         const val CAR_TIMEOUT_MS = 10000L
+        const val CAR_PROPERTY_TIMEOUT_MS = 10000L
     }
 
     private val carStatusFlowInternal = MutableStateFlow(CarStatus.DISCONNECTED)
@@ -114,6 +118,13 @@ class KarPropertyManager(
                     carStatusFlowInternal.value =  if (it != null) CarStatus.CONNECTED else CarStatus.DISCONNECTED
                 }
             }
+        }
+    }
+
+    suspend fun <T> getProperty(propertyId: Int, areaId: Int, timeout: Long = CAR_PROPERTY_TIMEOUT_MS): T? {
+        return withTimeoutOrNull(timeout) {
+            val carPropertyManager = carPropertyManagerFlow.filterNotNull().first()
+            carPropertyManager.getProperty<T>(propertyId, areaId)?.value
         }
     }
 
