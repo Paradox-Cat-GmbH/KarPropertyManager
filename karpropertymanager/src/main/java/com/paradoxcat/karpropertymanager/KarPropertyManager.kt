@@ -127,7 +127,7 @@ class KarPropertyManager(
 
     /**
      * Returns a single property value or null on a timeout. Uses property Ids from
-     * [@link android.car.VehiclePropertyIds VehiclePropertyIds]
+     * [android.car.VehiclePropertyIds]
      *
      * @param   propertyId  Id of a property
      * @param   areaId      vehicle area type for property
@@ -143,7 +143,7 @@ class KarPropertyManager(
     }
 
     /**
-     * Returns flow of the property values. Uses property Ids from VehiclePropertyIds
+     * Returns flow of the property values. Uses property Ids from [android.car.VehiclePropertyIds]
      *
      * @param   propertyId      Id of a property
      * @param   areaId          vehicle area type for property
