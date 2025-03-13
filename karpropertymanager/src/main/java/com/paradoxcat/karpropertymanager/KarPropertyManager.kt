@@ -84,11 +84,14 @@ class KarPropertyManager(
                             Log.d(TAG, "legacyServiceConnection: Car Service disconnected, emitting null, requesting new car")
                             trySend(null)
                             if (!stop.get()) {
+                                @Suppress("DEPRECATION")
                                 car.connect()
                             }
                         }
                     }
                     Log.d(TAG, "creating car")
+
+                    @Suppress("DEPRECATION")
                     serviceConnection.car = Car.createCar(context, serviceConnection)
 
                     Log.d(TAG, "car is created and is connected: ${serviceConnection.car.isConnected}")
@@ -97,6 +100,8 @@ class KarPropertyManager(
                         trySend(serviceConnection.car)
                     } else {
                         Log.d(TAG, "car is not connected, connecting")
+
+                        @Suppress("DEPRECATION")
                         serviceConnection.car.connect()
                     }
 
@@ -147,6 +152,7 @@ class KarPropertyManager(
         if (Build.VERSION.SDK_INT >= 35) {
             unsubscribePropertyEvents(listener)
         } else {
+            @Suppress("DEPRECATION")
             unregisterCallback(listener)
         }
     }
@@ -165,6 +171,7 @@ class KarPropertyManager(
                 listener,
             )
         } else {
+            @Suppress("DEPRECATION")
             registerCallback(
                 listener,
                 propertyId,
