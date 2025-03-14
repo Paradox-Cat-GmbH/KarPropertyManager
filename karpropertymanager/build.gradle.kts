@@ -45,7 +45,7 @@ dependencies {
     androidTestImplementation(libs.androidx.espresso.core)
 }
 
-val libVersion = "1.0.0"
+val libVersion = "0.1.0"
 
 publishing {
     publications {
