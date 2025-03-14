@@ -50,8 +50,8 @@ val libVersion = "0.1.0"
 publishing {
     publications {
         register<MavenPublication>("release") {
-            groupId = "com.paradoxcat"
-            artifactId = "karpropertymanager"
+            groupId = "io.github.tauqir1" // should be unique and publicly available domain name
+            artifactId = "kar-property-manager"
             version = libVersion
 
             pom {
