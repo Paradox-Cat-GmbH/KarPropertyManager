@@ -58,15 +58,15 @@ Please take a look at [sample application](./sample-app) to see a full working e
 
 For documentation, please refer to comment blocks in the methods you are using, we do not provide generated documentation.
 
-If you are still facing issues, feel free to create an [issue](./issues) and label it appropriately.
+If you are still facing issues, feel free to create an [issue](https://github.com/Paradox-Cat-GmbH/KarPropertyManager/issues) and label it appropriately.
 
 ## Feedback
 
-Got feedback? Let us discuss! Feel free to create a [new discussion](./discussions).
+Got feedback? Let us discuss! Feel free to create a [new discussion](https://github.com/Paradox-Cat-GmbH/KarPropertyManager/discussions).
 
 ## Contribution
 
-Contributions are welcome, simply create a [pull request](./pulls).
+Contributions are welcome, simply create a [pull request](https://github.com/Paradox-Cat-GmbH/KarPropertyManager/pulls).
 
 ## Maintainers
 
