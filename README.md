@@ -17,9 +17,9 @@ Why KarPropertyManager?
 ## Usage Example
 
 ```kotlin
-val kmp = KarPropertyManager(context, scope)
-kmp.startObservingCar()
-val speedFlow = kmp.flowOfProperty<Float>(VehiclePropertyIds.PERF_VEHICLE_SPEED, 0, 0.5F)
+val kpm = KarPropertyManager(context, scope)
+kpm.startObservingCar()
+val speedFlow = kpm.flowOfProperty<Float>(VehiclePropertyIds.PERF_VEHICLE_SPEED, 0, 0.5F)
 ```
 
 ## Declare dependencies
