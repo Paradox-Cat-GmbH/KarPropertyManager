@@ -34,14 +34,14 @@ class MainActivity : ComponentActivity() {
         setContent {
             val context = LocalContext.current
             val scope = rememberCoroutineScope()
-            val kmp = remember(context, scope) { KarPropertyManager(context, scope) }
+            val kpm = remember(context, scope) { KarPropertyManager(context, scope) }
 
-            LaunchedEffect(kmp) {
-                kmp.startObservingCar()
+            LaunchedEffect(kpm) {
+                kpm.startObservingCar()
             }
 
-            val speedFlow = remember(kmp) {
-                kmp.flowOfProperty<Float>(VehiclePropertyIds.PERF_VEHICLE_SPEED, 0, 0.5F)
+            val speedFlow = remember(kpm) {
+                kpm.flowOfProperty<Float>(VehiclePropertyIds.PERF_VEHICLE_SPEED, 0, 0.5F)
                     .stateIn(scope, SharingStarted.Eagerly, 0.0F)
             }
 
