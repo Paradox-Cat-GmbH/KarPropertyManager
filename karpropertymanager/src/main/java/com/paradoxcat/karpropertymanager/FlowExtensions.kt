@@ -1,11 +1,15 @@
 package com.paradoxcat.karpropertymanager
 
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.takeWhile
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
 
-fun <T> Flow<T>.gateWith(flagFlow: Flow<Boolean>) =
-    combine(flagFlow) { value, flag ->
-        Pair(value, flag)
-    }.takeWhile { it.second }.map { it.first }
+@OptIn(ExperimentalCoroutinesApi::class)
+fun <T> Flow<T>.gateWith(flagFlow: Flow<Boolean>): Flow<T> = flagFlow.flatMapLatest {
+    if (it) {
+        this
+    } else {
+        flowOf()
+    }
+}
