@@ -52,6 +52,10 @@ For standard Google Vehicle Properties, use [documentation provided by google](h
 
 For `VENDOR` properties defined by OEMs, refer to their respective documentation.
 
+## License
+
+See [LICENSE](./LICENSE) file.
+
 ## Where to get help
 
 Please take a look at [sample application](./sample-app) to see a full working example.
