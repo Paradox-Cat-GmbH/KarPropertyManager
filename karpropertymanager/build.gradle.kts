@@ -50,78 +50,72 @@ val libVersion = "0.1.0"
 publishing {
     publications {
         register<MavenPublication>("release") {
-            groupId = "io.github.tauqir1" // should be unique and publicly available domain name
-            artifactId = "kar-property-manager"
+            groupId = "com.paradoxcat"
+            artifactId = "karpropertymanager"
             version = libVersion
-
             pom {
                 name = "KarPropertyManager"
-                description = "Car property manager"
-                url = "https://github.com/Paradox-Cat-GmbH/KarPropertyManager/"
+                description = "Kotlin wrapper over default Java CarPropertyManager API"
+                url = "https://github.com/Paradox-Cat-GmbH/KarPropertyManager"
                 licenses {
                     license {
-                        name = "GNU Lesser General Public License v3.0"
-                        url = "https://github.com/Slion/Preference/"
+                        name = "MIT License"
+                        url = "http://www.opensource.org/licenses/mit-license.php"
                     }
+                }
+                organization {
+                    name = "Paradox Cat GmbH"
+                    url = "https://paradoxcat.com"
                 }
                 developers {
                     developer {
-                        id = "tauqir1"
-                        name = "Mohammad Ansari"
-                        email = "mohammad.ansari@paradoxcat.com"
+                        id = "Paradox-Cat-GmbH"
+                        name = "Paradox Cat GmbH"
+                        email = "info@paradoxcat.com"
                     }
                 }
                 scm {
-                    //connection = "scm:git:git://example.com/my-library.git"
-                    //developerConnection = "scm:git:ssh://example.com/my-library.git"
-                    url = "https://github.com/Paradox-Cat-GmbH/KarPropertyManager/"
+                    connection = "scm:git:git://github.com/Paradox-Cat-GmbH/KarPropertyManager.git"
+                    developerConnection = "scm:git:ssh://github.com/Paradox-Cat-GmbH/KarPropertyManager.git"
+                    url = "https://github.com/Paradox-Cat-GmbH/KarPropertyManager"
                 }
             }
-
             afterEvaluate {
                 from(components["release"])
             }
-
-        }
-    }
-
-    repositories {
-        maven {
-            name = "maven"
-            url = uri(layout.buildDirectory.dir("maven"))
         }
     }
 }
 
-signing {
-    // Use installed GPG rather than built-in outdated version
-    useGpgCmd()
-// Sign all publications I guess
-    sign(publishing.publications)
-//sign(publishing.publications["release"])
-}
-
-tasks.register<Zip>("generateUploadPackage") {
-    // Take the output of our publishing
-    val publishTask = tasks.named(
-        "publishReleasePublicationToMavenRepository",
-        PublishToMavenRepository::class.java)
-
-    from(publishTask.map { it.repository.url })
-
-// Exclude maven-metadata.xml as Sonatype fails upload validation otherwise
-    exclude {
-        // Exclude left over directories not matching current version
-        // That was needed otherwise older versions empty directories would be include in our ZIP
-        if (it.file.isDirectory && it.path.matches(Regex(""".*\d+\.\d+.\d+$""")) && !it.path.contains(libVersion)) {
-            return@exclude true
-        }
-
-        // Only take files inside current version directory
-        // Notably excludes maven-metadata.xml which Maven Central upload validation does not like
-        (it.file.isFile && !it.path.contains(libVersion))
-    }
-
-    // Name of zip file
-    archiveFileName.set("tauqir1.zip")
-}
+//signing {
+//    // Use installed GPG rather than built-in outdated version
+//    useGpgCmd()
+//    // Sign all publications I guess
+//    sign(publishing.publications)
+//    // sign(publishing.publications["release"])
+//}
+//
+//tasks.register<Zip>("generateUploadPackage") {
+//    // Take the output of our publishing
+//    val publishTask = tasks.named(
+//        "publishReleasePublicationToMavenRepository",
+//        PublishToMavenRepository::class.java)
+//
+//    from(publishTask.map { it.repository.url })
+//
+//// Exclude maven-metadata.xml as Sonatype fails upload validation otherwise
+//    exclude {
+//        // Exclude left over directories not matching current version
+//        // That was needed otherwise older versions empty directories would be include in our ZIP
+//        if (it.file.isDirectory && it.path.matches(Regex(""".*\d+\.\d+.\d+$""")) && !it.path.contains(libVersion)) {
+//            return@exclude true
+//        }
+//
+//        // Only take files inside current version directory
+//        // Notably excludes maven-metadata.xml which Maven Central upload validation does not like
+//        (it.file.isFile && !it.path.contains(libVersion))
+//    }
+//
+//    // Name of zip file
+//    archiveFileName.set("tauqir1.zip")
+//}
