@@ -57,7 +57,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 import java.util.concurrent.atomic.AtomicBoolean
 
-class KarPropertyManagerException(cause: Exception): Exception(cause)
+class KarPropertyManagerException(cause: Exception) : Exception(cause)
 
 enum class CarStatus { CONNECTED, DISCONNECTED }
 
@@ -148,6 +148,7 @@ class KarPropertyManager(
 
     /**
      * Returns flow of the property values. Uses property Ids from [android.car.VehiclePropertyIds]
+     * If this property cannot be observed, e.g. due to a missing runtime permission, the returned flow will be closed.
      *
      * @param   propertyId      Id of a property
      * @param   areaId          vehicle area type for property
@@ -175,7 +176,16 @@ class KarPropertyManager(
                         }
                     }
 
-                    carPropertyManager.subscribeCompat(propertyId, areaId, updateRateHz, listener)
+                    val isSuccess = carPropertyManager.subscribeCompat(
+                        propertyId,
+                        areaId,
+                        updateRateHz,
+                        listener
+                    )
+
+                    if (!isSuccess) {
+                        close()
+                    }
 
                     awaitClose {
                         carPropertyManager.unsubscribeCompat(listener)
@@ -288,10 +298,10 @@ class KarPropertyManager(
         areaId: Int,
         updateRateHz: Float,
         listener: CarPropertyManager.CarPropertyEventCallback
-    ) {
+    ): Boolean {
         if (Build.VERSION.SDK_INT >= 35) {
             try {
-                subscribePropertyEvents(
+                return subscribePropertyEvents(
                     propertyId,
                     areaId,
                     updateRateHz,
@@ -302,7 +312,7 @@ class KarPropertyManager(
             }
         } else {
             @Suppress("DEPRECATION")
-            registerCallback(
+            return registerCallback(
                 listener,
                 propertyId,
                 updateRateHz,
