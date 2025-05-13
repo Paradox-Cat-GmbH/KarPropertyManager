@@ -22,7 +22,6 @@
 
 package com.example.karpropertysampleapp
 
-import android.Manifest
 import android.car.Car
 import android.car.VehiclePropertyIds
 import android.content.pm.PackageManager
@@ -30,6 +29,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts.RequestPermission
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -38,17 +38,24 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import com.example.karpropertysampleapp.ui.theme.KarPropertySampleAppTheme
 import com.paradoxcat.karpropertymanager.KarPropertyManager
-import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.flowOf
 
 class MainActivity : ComponentActivity() {
+
+    private var permissionsGranted by mutableStateOf(false)
+
+    private val requestPermissionLauncher =
+        registerForActivityResult(RequestPermission()) { permissionsGranted = it }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -62,12 +69,15 @@ class MainActivity : ComponentActivity() {
                 kpm.startObservingCar()
             }
 
-            val speedFlow = remember(kpm) {
-                kpm.flowOfProperty<Float>(VehiclePropertyIds.PERF_VEHICLE_SPEED, 0, 0.5F)
-                    .stateIn(scope, SharingStarted.Eagerly, 0.0F)
+            val speedFlow = remember(kpm, permissionsGranted) {
+                if (permissionsGranted) {
+                    kpm.flowOfProperty<Float>(VehiclePropertyIds.PERF_VEHICLE_SPEED, 0, 0.5F)
+                } else {
+                    flowOf()
+                }
             }
 
-            val speed by speedFlow.collectAsState()
+            val speed by speedFlow.collectAsState(initial = 0.0F)
 
             KarPropertySampleAppTheme {
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
@@ -85,10 +95,8 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun requestPermission() {
-        if (checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            requestPermissions(
-                arrayOf(Car.PERMISSION_SPEED, Manifest.permission.ACCESS_COARSE_LOCATION, Manifest.permission.ACCESS_FINE_LOCATION), 1
-            )
+        if (checkSelfPermission(Car.PERMISSION_SPEED) != PackageManager.PERMISSION_GRANTED) {
+            requestPermissionLauncher.launch(Car.PERMISSION_SPEED)
         }
     }
 }
