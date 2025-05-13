@@ -1,6 +1,7 @@
 plugins {
     alias(libs.plugins.android.library)
     alias(libs.plugins.kotlin.android)
+    alias(libs.plugins.jetbrains.dokka)
     `maven-publish`
     signing
 }
@@ -19,7 +20,10 @@ android {
     buildTypes {
         release {
             isMinifyEnabled = false
-            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
+            )
         }
     }
 
@@ -47,75 +51,96 @@ dependencies {
 
 val libVersion = "0.1.0"
 
+tasks.register<Jar>("dokkaJavadocJar") {
+    group = JavaBasePlugin.DOCUMENTATION_GROUP
+    dependsOn(tasks.dokkaJavadoc)
+    from(tasks.dokkaJavadoc.flatMap { it.outputDirectory })
+    archiveClassifier.set("javadoc")
+}
+
 publishing {
     publications {
-        register<MavenPublication>("release") {
-            groupId = "com.paradoxcat"
-            artifactId = "karpropertymanager"
-            version = libVersion
-            pom {
-                name = "KarPropertyManager"
-                description = "Kotlin wrapper over default Java CarPropertyManager API"
-                url = "https://github.com/Paradox-Cat-GmbH/KarPropertyManager"
-                licenses {
-                    license {
-                        name = "MIT License"
-                        url = "http://www.opensource.org/licenses/mit-license.php"
-                    }
-                }
-                organization {
-                    name = "Paradox Cat GmbH"
-                    url = "https://paradoxcat.com"
-                }
-                developers {
-                    developer {
-                        id = "Paradox-Cat-GmbH"
-                        name = "Paradox Cat GmbH"
-                        email = "info@paradoxcat.com"
-                    }
-                }
-                scm {
-                    connection = "scm:git:git://github.com/Paradox-Cat-GmbH/KarPropertyManager.git"
-                    developerConnection = "scm:git:ssh://github.com/Paradox-Cat-GmbH/KarPropertyManager.git"
+        afterEvaluate {
+            register<MavenPublication>("release") {
+                groupId = "com.paradoxcat"
+                artifactId = "karpropertymanager"
+                version = libVersion
+                artifact(tasks["dokkaJavadocJar"])
+                pom {
+                    packaging="aar"
+                    name = "KarPropertyManager"
+                    description = "Kotlin wrapper over default Java CarPropertyManager API"
                     url = "https://github.com/Paradox-Cat-GmbH/KarPropertyManager"
+                    licenses {
+                        license {
+                            name = "MIT License"
+                            url = "http://www.opensource.org/licenses/mit-license.php"
+                        }
+                    }
+                    organization {
+                        name = "Paradox Cat GmbH"
+                        url = "https://paradoxcat.com"
+                    }
+                    developers {
+                        developer {
+                            id = "Paradox-Cat-GmbH"
+                            name = "Paradox Cat GmbH"
+                            email = "info@paradoxcat.com"
+                        }
+                    }
+                    scm {
+                        connection =
+                            "scm:git:git://github.com/Paradox-Cat-GmbH/KarPropertyManager.git"
+                        developerConnection =
+                            "scm:git:ssh://github.com/Paradox-Cat-GmbH/KarPropertyManager.git"
+                        url = "https://github.com/Paradox-Cat-GmbH/KarPropertyManager"
+                    }
                 }
-            }
-            afterEvaluate {
                 from(components["release"])
             }
         }
     }
+    repositories {
+        maven {
+            url = uri(layout.buildDirectory.dir("repos"))
+        }
+    }
 }
 
-//signing {
-//    // Use installed GPG rather than built-in outdated version
-//    useGpgCmd()
-//    // Sign all publications I guess
-//    sign(publishing.publications)
-//    // sign(publishing.publications["release"])
-//}
-//
-//tasks.register<Zip>("generateUploadPackage") {
-//    // Take the output of our publishing
-//    val publishTask = tasks.named(
-//        "publishReleasePublicationToMavenRepository",
-//        PublishToMavenRepository::class.java)
-//
-//    from(publishTask.map { it.repository.url })
-//
-//// Exclude maven-metadata.xml as Sonatype fails upload validation otherwise
-//    exclude {
-//        // Exclude left over directories not matching current version
-//        // That was needed otherwise older versions empty directories would be include in our ZIP
-//        if (it.file.isDirectory && it.path.matches(Regex(""".*\d+\.\d+.\d+$""")) && !it.path.contains(libVersion)) {
-//            return@exclude true
-//        }
-//
-//        // Only take files inside current version directory
-//        // Notably excludes maven-metadata.xml which Maven Central upload validation does not like
-//        (it.file.isFile && !it.path.contains(libVersion))
-//    }
-//
-//    // Name of zip file
-//    archiveFileName.set("tauqir1.zip")
-//}
+signing {
+    useGpgCmd()
+    afterEvaluate {
+        sign(publishing.publications["release"])
+    }
+}
+
+
+tasks.register<Zip>("generateUploadPackage") {
+    // Take the output of our publishing
+    val publishTask = tasks.named(
+        "publishReleasePublicationToMavenRepository",
+        PublishToMavenRepository::class.java
+    )
+
+
+    from(publishTask.map { it.repository.url })
+
+// Exclude maven-metadata.xml as Sonatype fails upload validation otherwise
+    exclude {
+        // Exclude left over directories not matching current version
+        // That was needed otherwise older versions empty directories would be include in our ZIP
+        if (it.file.isDirectory && it.path.matches(Regex(""".*\d+\.\d+.\d+$""")) && !it.path.contains(
+                libVersion
+            )
+        ) {
+            return@exclude true
+        }
+
+        // Only take files inside current version directory
+        // Notably excludes maven-metadata.xml which Maven Central upload validation does not like
+        (it.file.isFile && !it.path.contains(libVersion))
+    }
+
+    // Name of zip file
+    archiveFileName.set("karpropertymanager-$libVersion.zip")
+}
