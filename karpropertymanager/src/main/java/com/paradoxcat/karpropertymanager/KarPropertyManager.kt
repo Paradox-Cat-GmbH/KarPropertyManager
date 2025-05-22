@@ -139,7 +139,7 @@ class KarPropertyManager(
      * These flows are cold. Terminating on these flows causes a connection to the Android Car service to be established
      * unless there's an established one already, then it will be reused. The connection will remain alive as long as
      * at least one subscription to any of the flows remains alive. Once all subscriptions close the Android Car service
-     * will be also closed.
+     * will be also closed after [carConnectionRetentionTimeoutMs].
      *
      * @param propertyId      Id of a property
      * @param areaId          vehicle area type for property
