@@ -20,18 +20,24 @@
  * SOFTWARE.
  */
 
-package com.paradoxcat.karpropertymanager
+package com.paradoxcat.karpropertymanager.model
 
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.flow.flowOf
 
-@OptIn(ExperimentalCoroutinesApi::class)
-internal inline fun <T, R> Flow<T?>.flatMapCloseOnNull(crossinline block: suspend (T) -> Flow<R>) = flatMapLatest {
-    if (it == null) {
-        flowOf()
-    } else {
-        block(it)
-    }
+data class KarPropertyValue<T>(
+    val value: T,
+    val timestampNs: Long,
+)
+
+data class KarProperty<T>(
+    val propertyId: Int,
+    val areaId: Int,
+    val valueFlow: Flow<KarPropertyValue<T>>,
+    val availabilityFlow: Flow<PropertyAvailability>,
+)
+
+enum class PropertyAvailability {
+    AVAILABLE,
+    UNAVAILABLE,
+    ERROR,
 }
