@@ -1,16 +1,16 @@
 /**
  * Copyright (c) 2025 Paradox Cat GmbH
- * 
+ *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
  * in the Software without restriction, including without limitation the rights
  * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
  * copies of the Software, and to permit persons to whom the Software is
  * furnished to do so, subject to the following conditions:
- * 
+ *
  * The above copyright notice and this permission notice shall be included in all
  * copies or substantial portions of the Software.
- * 
+ *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
  * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -26,16 +26,18 @@ import android.car.Car
 import android.car.VehiclePropertyIds
 import android.content.pm.PackageManager
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts.RequestPermission
-import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Button
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -63,31 +65,46 @@ class MainActivity : ComponentActivity() {
         setContent {
             val context = LocalContext.current
             val scope = rememberCoroutineScope()
-            val kpm = remember(context, scope) { KarPropertyManager(context, scope) }
-
-            LaunchedEffect(kpm) {
-                kpm.startObservingCar()
+            val kpm = remember(context, scope) {
+                KarPropertyManager(
+                    context = context,
+                    scope = scope,
+                )
             }
 
-            val speedFlow = remember(kpm, permissionsGranted) {
-                if (permissionsGranted) {
-                    kpm.flowOfProperty<Float>(VehiclePropertyIds.PERF_VEHICLE_SPEED, 0, 0.5F)
+            var subscribed by remember { mutableStateOf(false) }
+
+            val speedFlow = remember(subscribed, kpm, permissionsGranted) {
+                if (permissionsGranted && subscribed) {
+                    kpm.getProperty<Float>(VehiclePropertyIds.PERF_VEHICLE_SPEED, 0, 60F).valueFlow
                 } else {
                     flowOf()
                 }
             }
 
-            val speed by speedFlow.collectAsState(initial = 0.0F)
+            val speed by speedFlow.collectAsState(initial = null)
 
             KarPropertySampleAppTheme {
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    Box(
+                    Column(
                         modifier = Modifier
                             .fillMaxSize()
                             .padding(innerPadding),
-                        contentAlignment = Alignment.Center
+                        verticalArrangement = Arrangement.Center,
+                        horizontalAlignment = Alignment.CenterHorizontally,
                     ) {
-                        Text("Speed: $speed")
+                        if (subscribed) {
+                            Text("Speed: $speed")
+                        } else {
+                            Text("Not subscribed")
+                        }
+
+                        Button(onClick = {
+                            Log.d(TAG, "===============subscribe click===============")
+                            subscribed = !subscribed
+                        }) {
+                            Text("Switch subscription")
+                        }
                     }
                 }
             }
@@ -97,6 +114,12 @@ class MainActivity : ComponentActivity() {
     private fun requestPermission() {
         if (checkSelfPermission(Car.PERMISSION_SPEED) != PackageManager.PERMISSION_GRANTED) {
             requestPermissionLauncher.launch(Car.PERMISSION_SPEED)
+        } else {
+            permissionsGranted = true
         }
+    }
+
+    companion object {
+        const val TAG = "SampleApp"
     }
 }
