@@ -39,6 +39,10 @@ android {
     useLibrary("android.car", required = false)
 
     packaging { resources.excludes.add("META-INF/*") }
+
+    publishing {
+        singleVariant("release")
+    }
 }
 
 dependencies {
@@ -49,7 +53,8 @@ dependencies {
     androidTestImplementation(libs.androidx.espresso.core)
 }
 
-val libVersion = "0.1.0"
+val releaseVersion: String? by project
+val libVersion = releaseVersion ?: "SNAPSHOT"
 
 tasks.register<Jar>("dokkaJavadocJar") {
     group = JavaBasePlugin.DOCUMENTATION_GROUP
@@ -58,16 +63,16 @@ tasks.register<Jar>("dokkaJavadocJar") {
     archiveClassifier.set("javadoc")
 }
 
-publishing {
-    publications {
-        afterEvaluate {
+afterEvaluate {
+    publishing {
+        publications {
             register<MavenPublication>("release") {
                 groupId = "com.paradoxcat"
                 artifactId = "karpropertymanager"
                 version = libVersion
                 artifact(tasks["dokkaJavadocJar"])
                 pom {
-                    packaging="aar"
+                    packaging = "aar"
                     name = "KarPropertyManager"
                     description = "Kotlin wrapper over default Java CarPropertyManager API"
                     url = "https://github.com/Paradox-Cat-GmbH/KarPropertyManager"
@@ -99,17 +104,24 @@ publishing {
                 from(components["release"])
             }
         }
-    }
-    repositories {
-        maven {
-            url = uri(layout.buildDirectory.dir("repos"))
+        repositories {
+            maven {
+                name = "ossrh-staging-api"
+                url =
+                    uri("https://ossrh-staging-api.central.sonatype.com/service/local/staging/deploy/maven2/")
+                credentials {
+                    username = System.getenv("MAVEN_CENTRAL_USERNAME")
+                    password = System.getenv("MAVEN_CENTRAL_TOKEN")
+                }
+            }
         }
     }
-}
 
-signing {
-    useGpgCmd()
-    afterEvaluate {
+    signing {
+        useInMemoryPgpKeys(
+            System.getenv("GPG_PRIVATE_KEY"),
+            System.getenv("GPG_PASSPHRASE")
+        )
         sign(publishing.publications["release"])
     }
 }
