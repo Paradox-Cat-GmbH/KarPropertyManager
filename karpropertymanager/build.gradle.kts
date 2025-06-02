@@ -1,6 +1,7 @@
 plugins {
     alias(libs.plugins.android.library)
     alias(libs.plugins.kotlin.android)
+    alias(libs.plugins.jetbrains.dokka)
     `maven-publish`
     signing
 }
@@ -19,7 +20,10 @@ android {
     buildTypes {
         release {
             isMinifyEnabled = false
-            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
+            )
         }
     }
 
@@ -35,6 +39,10 @@ android {
     useLibrary("android.car", required = false)
 
     packaging { resources.excludes.add("META-INF/*") }
+
+    publishing {
+        singleVariant("release")
+    }
 }
 
 dependencies {
@@ -45,67 +53,87 @@ dependencies {
     androidTestImplementation(libs.androidx.espresso.core)
 }
 
-val libVersion = "0.1.0"
+val releaseVersion: String? by project
+val libVersion = releaseVersion ?: "SNAPSHOT"
 
-publishing {
-    publications {
-        register<MavenPublication>("release") {
-            groupId = "io.github.tauqir1" // should be unique and publicly available domain name
-            artifactId = "kar-property-manager"
-            version = libVersion
+tasks.register<Jar>("dokkaJavadocJar") {
+    group = JavaBasePlugin.DOCUMENTATION_GROUP
+    dependsOn(tasks.dokkaJavadoc)
+    from(tasks.dokkaJavadoc.flatMap { it.outputDirectory })
+    archiveClassifier.set("javadoc")
+}
 
-            pom {
-                name = "KarPropertyManager"
-                description = "Car property manager"
-                url = "https://github.com/Paradox-Cat-GmbH/KarPropertyManager/"
-                licenses {
-                    license {
-                        name = "GNU Lesser General Public License v3.0"
-                        url = "https://github.com/Slion/Preference/"
+afterEvaluate {
+    publishing {
+        publications {
+            register<MavenPublication>("release") {
+                groupId = "com.paradoxcat"
+                artifactId = "karpropertymanager"
+                version = libVersion
+                artifact(tasks["dokkaJavadocJar"])
+                pom {
+                    packaging = "aar"
+                    name = "KarPropertyManager"
+                    description = "Kotlin wrapper over default Java CarPropertyManager API"
+                    url = "https://github.com/Paradox-Cat-GmbH/KarPropertyManager"
+                    licenses {
+                        license {
+                            name = "MIT License"
+                            url = "http://www.opensource.org/licenses/mit-license.php"
+                        }
+                    }
+                    organization {
+                        name = "Paradox Cat GmbH"
+                        url = "https://paradoxcat.com"
+                    }
+                    developers {
+                        developer {
+                            id = "Paradox-Cat-GmbH"
+                            name = "Paradox Cat GmbH"
+                            email = "info@paradoxcat.com"
+                        }
+                    }
+                    scm {
+                        connection =
+                            "scm:git:git://github.com/Paradox-Cat-GmbH/KarPropertyManager.git"
+                        developerConnection =
+                            "scm:git:ssh://github.com/Paradox-Cat-GmbH/KarPropertyManager.git"
+                        url = "https://github.com/Paradox-Cat-GmbH/KarPropertyManager"
                     }
                 }
-                developers {
-                    developer {
-                        id = "tauqir1"
-                        name = "Mohammad Ansari"
-                        email = "mohammad.ansari@paradoxcat.com"
-                    }
-                }
-                scm {
-                    //connection = "scm:git:git://example.com/my-library.git"
-                    //developerConnection = "scm:git:ssh://example.com/my-library.git"
-                    url = "https://github.com/Paradox-Cat-GmbH/KarPropertyManager/"
-                }
-            }
-
-            afterEvaluate {
                 from(components["release"])
             }
-
+        }
+        repositories {
+            maven {
+                name = "ossrh-staging-api"
+                url =
+                    uri("https://ossrh-staging-api.central.sonatype.com/service/local/staging/deploy/maven2/")
+                credentials {
+                    username = System.getenv("MAVEN_CENTRAL_USERNAME")
+                    password = System.getenv("MAVEN_CENTRAL_TOKEN")
+                }
+            }
         }
     }
 
-    repositories {
-        maven {
-            name = "maven"
-            url = uri(layout.buildDirectory.dir("maven"))
-        }
+    signing {
+        useInMemoryPgpKeys(
+            System.getenv("GPG_PRIVATE_KEY"),
+            System.getenv("GPG_PASSPHRASE")
+        )
+        sign(publishing.publications["release"])
     }
 }
 
-signing {
-    // Use installed GPG rather than built-in outdated version
-    useGpgCmd()
-// Sign all publications I guess
-    sign(publishing.publications)
-//sign(publishing.publications["release"])
-}
 
 tasks.register<Zip>("generateUploadPackage") {
     // Take the output of our publishing
     val publishTask = tasks.named(
         "publishReleasePublicationToMavenRepository",
-        PublishToMavenRepository::class.java)
+        PublishToMavenRepository::class.java
+    )
+
 
     from(publishTask.map { it.repository.url })
 
@@ -113,7 +141,10 @@ tasks.register<Zip>("generateUploadPackage") {
     exclude {
         // Exclude left over directories not matching current version
         // That was needed otherwise older versions empty directories would be include in our ZIP
-        if (it.file.isDirectory && it.path.matches(Regex(""".*\d+\.\d+.\d+$""")) && !it.path.contains(libVersion)) {
+        if (it.file.isDirectory && it.path.matches(Regex(""".*\d+\.\d+.\d+$""")) && !it.path.contains(
+                libVersion
+            )
+        ) {
             return@exclude true
         }
 
@@ -123,5 +154,5 @@ tasks.register<Zip>("generateUploadPackage") {
     }
 
     // Name of zip file
-    archiveFileName.set("tauqir1.zip")
+    archiveFileName.set("karpropertymanager-$libVersion.zip")
 }
