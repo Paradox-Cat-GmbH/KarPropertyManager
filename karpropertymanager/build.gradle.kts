@@ -4,9 +4,8 @@ plugins {
     alias(libs.plugins.android.library)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.jetbrains.dokka)
-    alias(libs.plugins.jreleaser)
     `maven-publish`
-    signing
+    alias(libs.plugins.jreleaser)
 }
 
 android {
@@ -117,17 +116,14 @@ afterEvaluate {
         repositories {
             maven {
                 name = "staging"
-                url = uri(layout.buildDirectory.dir("staging-deploy"))
+                url =
+                    layout.buildDirectory
+                        .dir("staging-deploy")
+                        .get()
+                        .asFile
+                        .toURI()
             }
         }
-    }
-
-    signing {
-        useInMemoryPgpKeys(
-            System.getenv("GPG_PRIVATE_KEY"),
-            System.getenv("GPG_PASSPHRASE"),
-        )
-        sign(publishing.publications["release"])
     }
 
     jreleaser {
@@ -135,16 +131,22 @@ afterEvaluate {
         project {
             version = libVersion
         }
+        signing {
+            active = Active.ALWAYS
+            armored = true
+        }
         deploy {
             maven {
                 mavenCentral {
                     create("sonatype") {
                         active = Active.ALWAYS
                         url = "https://central.sonatype.com/api/v1/publisher"
-                        stagingRepository("build/staging-deploy")
-                        username = System.getenv("MAVEN_CENTRAL_USERNAME")
-                        password = System.getenv("MAVEN_CENTRAL_TOKEN")
-                        sign = false
+                        stagingRepository(
+                            layout.buildDirectory
+                                .dir("staging-deploy")
+                                .get()
+                                .asFile.path,
+                        )
                     }
                 }
             }
@@ -152,34 +154,34 @@ afterEvaluate {
     }
 }
 
-tasks.register<Zip>("generateUploadPackage") {
-    // Take the output of our publishing
-    val publishTask =
-        tasks.named(
-            "publishReleasePublicationToMavenRepository",
-            PublishToMavenRepository::class.java,
-        )
-
-    from(publishTask.map { it.repository.url })
-
-// Exclude maven-metadata.xml as Sonatype fails upload validation otherwise
-    exclude {
-        // Exclude left over directories not matching current version
-        // That was needed otherwise older versions empty directories would be include in our ZIP
-        if (it.file.isDirectory &&
-            it.path.matches(Regex(""".*\d+\.\d+.\d+$""")) &&
-            !it.path.contains(
-                libVersion,
-            )
-        ) {
-            return@exclude true
-        }
-
-        // Only take files inside current version directory
-        // Notably excludes maven-metadata.xml which Maven Central upload validation does not like
-        (it.file.isFile && !it.path.contains(libVersion))
-    }
-
-    // Name of zip file
-    archiveFileName.set("karpropertymanager-$libVersion.zip")
-}
+// tasks.register<Zip>("generateUploadPackage") {
+//    // Take the output of our publishing
+//    val publishTask =
+//        tasks.named(
+//            "publishReleasePublicationToMavenRepository",
+//            PublishToMavenRepository::class.java,
+//        )
+//
+//    from(publishTask.map { it.repository.url })
+//
+// // Exclude maven-metadata.xml as Sonatype fails upload validation otherwise
+//    exclude {
+//        // Exclude left over directories not matching current version
+//        // That was needed otherwise older versions empty directories would be include in our ZIP
+//        if (it.file.isDirectory &&
+//            it.path.matches(Regex(""".*\d+\.\d+.\d+$""")) &&
+//            !it.path.contains(
+//                libVersion,
+//            )
+//        ) {
+//            return@exclude true
+//        }
+//
+//        // Only take files inside current version directory
+//        // Notably excludes maven-metadata.xml which Maven Central upload validation does not like
+//        (it.file.isFile && !it.path.contains(libVersion))
+//    }
+//
+//    // Name of zip file
+//    archiveFileName.set("karpropertymanager-$libVersion.zip")
+// }
