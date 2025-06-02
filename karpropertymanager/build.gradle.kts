@@ -66,6 +66,12 @@ tasks.register<Jar>("dokkaJavadocJar") {
     archiveClassifier.set("javadoc")
 }
 
+configurations.all {
+    resolutionStrategy {
+        force("org.apache.commons:commons-compress:1.21")
+    }
+}
+
 afterEvaluate {
     publishing {
         publications {
