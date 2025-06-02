@@ -1,7 +1,10 @@
+import org.jreleaser.model.Active
+
 plugins {
     alias(libs.plugins.android.library)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.jetbrains.dokka)
+    alias(libs.plugins.jreleaser)
     `maven-publish`
     signing
 }
@@ -54,7 +57,7 @@ dependencies {
 }
 
 val releaseVersion: String? by project
-val libVersion = releaseVersion ?: "SNAPSHOT"
+val libVersion = releaseVersion ?: "v"
 
 tasks.register<Jar>("dokkaJavadocJar") {
     group = JavaBasePlugin.DOCUMENTATION_GROUP
@@ -107,13 +110,8 @@ afterEvaluate {
         }
         repositories {
             maven {
-                name = "ossrh-staging-api"
-                url =
-                    uri("https://ossrh-staging-api.central.sonatype.com/service/local/staging/deploy/maven2/")
-                credentials {
-                    username = System.getenv("MAVEN_CENTRAL_USERNAME")
-                    password = System.getenv("MAVEN_CENTRAL_TOKEN")
-                }
+                name = "staging"
+                url = uri(layout.buildDirectory.dir("staging-deploy"))
             }
         }
     }
@@ -124,6 +122,22 @@ afterEvaluate {
             System.getenv("GPG_PASSPHRASE"),
         )
         sign(publishing.publications["release"])
+    }
+
+    jreleaser {
+        deploy {
+            maven {
+                mavenCentral {
+                    create("sonatype") {
+                        active = Active.ALWAYS
+                        url = "https://central.sonatype.com/api/v1/publisher"
+                        stagingRepository("build/staging-deploy")
+                        username = System.getenv("MAVEN_CENTRAL_USERNAME")
+                        password = System.getenv("MAVEN_CENTRAL_TOKEN")
+                    }
+                }
+            }
+        }
     }
 }
 

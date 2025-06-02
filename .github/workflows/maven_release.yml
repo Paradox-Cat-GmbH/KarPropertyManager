@@ -30,5 +30,11 @@ jobs:
     - name: Grant execute permission for gradlew
       run: chmod +x gradlew
 
+    - name: Clean
+      run: ./gradlew clean
+
     - name: Publish
       run: ./gradlew publish -PreleaseVersion=$RELEASE_VERSION
+
+    - name: Deploy
+      run: ./gradlew jreleaserFullRelease

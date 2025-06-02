@@ -1,6 +1,7 @@
 [versions]
 agp = "8.9.0"
 dokka = "2.0.0"
+jreleaser = "1.18.0"
 kotlin = "2.0.21"
 coreKtx = "1.15.0"
 junit = "4.13.2"
@@ -37,4 +38,5 @@ kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 android-library = { id = "com.android.library", version.ref = "agp" }
 jetbrains-dokka = { id = "org.jetbrains.dokka", version.ref = "dokka" }
+jreleaser = {id = "org.jreleaser", version.ref = "jreleaser"}
 
