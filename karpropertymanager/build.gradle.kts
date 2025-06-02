@@ -57,7 +57,7 @@ dependencies {
 }
 
 val releaseVersion: String? by project
-val libVersion = releaseVersion ?: "v"
+val libVersion = releaseVersion ?: ""
 
 tasks.register<Jar>("dokkaJavadocJar") {
     group = JavaBasePlugin.DOCUMENTATION_GROUP
@@ -126,6 +126,9 @@ afterEvaluate {
 
     jreleaser {
         gitRootSearch = true
+        project {
+            version = libVersion
+        }
         deploy {
             maven {
                 mavenCentral {
