@@ -138,6 +138,7 @@ afterEvaluate {
                         stagingRepository("build/staging-deploy")
                         username = System.getenv("MAVEN_CENTRAL_USERNAME")
                         password = System.getenv("MAVEN_CENTRAL_TOKEN")
+                        sign = false
                     }
                 }
             }

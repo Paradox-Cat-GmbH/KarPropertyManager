@@ -10,6 +10,7 @@ jobs:
 
     runs-on: ubuntu-latest
     env:
+      JRELEASER_PROJECT_VERSION: ${{GITHUB_REF#refs/tags/v}}
       JRELEASER_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
       GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
@@ -30,6 +31,9 @@ jobs:
 
     - name: Grant execute permission for gradlew
       run: chmod +x gradlew
+
+    - name: Verify
+      run: ./gradlew jreleaserConfig -Pversion=$RELEASE_VERSION
 
     - name: Clean
       run: ./gradlew clean
