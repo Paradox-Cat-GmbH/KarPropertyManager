@@ -22,7 +22,7 @@ android {
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro"
+                "proguard-rules.pro",
             )
         }
     }
@@ -69,6 +69,7 @@ afterEvaluate {
             register<MavenPublication>("release") {
                 groupId = "com.paradoxcat"
                 artifactId = "karpropertymanager"
+                println("Lib Version: $libVersion")
                 version = libVersion
                 artifact(tasks["dokkaJavadocJar"])
                 pom {
@@ -120,20 +121,19 @@ afterEvaluate {
     signing {
         useInMemoryPgpKeys(
             System.getenv("GPG_PRIVATE_KEY"),
-            System.getenv("GPG_PASSPHRASE")
+            System.getenv("GPG_PASSPHRASE"),
         )
         sign(publishing.publications["release"])
     }
 }
 
-
 tasks.register<Zip>("generateUploadPackage") {
     // Take the output of our publishing
-    val publishTask = tasks.named(
-        "publishReleasePublicationToMavenRepository",
-        PublishToMavenRepository::class.java
-    )
-
+    val publishTask =
+        tasks.named(
+            "publishReleasePublicationToMavenRepository",
+            PublishToMavenRepository::class.java,
+        )
 
     from(publishTask.map { it.repository.url })
 
@@ -141,8 +141,10 @@ tasks.register<Zip>("generateUploadPackage") {
     exclude {
         // Exclude left over directories not matching current version
         // That was needed otherwise older versions empty directories would be include in our ZIP
-        if (it.file.isDirectory && it.path.matches(Regex(""".*\d+\.\d+.\d+$""")) && !it.path.contains(
-                libVersion
+        if (it.file.isDirectory &&
+            it.path.matches(Regex(""".*\d+\.\d+.\d+$""")) &&
+            !it.path.contains(
+                libVersion,
             )
         ) {
             return@exclude true
