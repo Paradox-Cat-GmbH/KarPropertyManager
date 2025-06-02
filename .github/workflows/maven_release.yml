@@ -10,7 +10,7 @@ jobs:
 
     runs-on: ubuntu-latest
     env:
-      JRELEASER_PROJECT_VERSION: $RELEASE_VERSION
+#      JRELEASER_PROJECT_VERSION: $RELEASE_VERSION
       JRELEASER_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
       GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
@@ -33,7 +33,7 @@ jobs:
       run: chmod +x gradlew
 
     - name: Verify
-      run: ./gradlew jreleaserConfig -Pversion=$RELEASE_VERSION
+      run: ./gradlew jreleaserConfig -PreleaseVersion=$RELEASE_VERSION
 
     - name: Clean
       run: ./gradlew clean
@@ -42,4 +42,4 @@ jobs:
       run: ./gradlew publish -PreleaseVersion=$RELEASE_VERSION
 
     - name: Deploy
-      run: ./gradlew jreleaserFullRelease -Pversion=$RELEASE_VERSION
+      run: ./gradlew jreleaserFullRelease -PreleaseVersion=$RELEASE_VERSION
