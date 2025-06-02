@@ -125,6 +125,7 @@ afterEvaluate {
     }
 
     jreleaser {
+        gitRootSearch = true
         deploy {
             maven {
                 mavenCentral {
