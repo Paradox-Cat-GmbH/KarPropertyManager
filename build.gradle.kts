@@ -4,12 +4,5 @@ plugins {
     alias(libs.plugins.kotlin.android) apply false
     alias(libs.plugins.android.library) apply false
     alias(libs.plugins.jetbrains.dokka) apply false
-}
-
-allprojects {
-    configurations.all {
-        resolutionStrategy {
-            force("org.apache.commons:commons-compress:1.27.1")
-        }
-    }
+    alias(libs.plugins.jreleaser) apply false
 }

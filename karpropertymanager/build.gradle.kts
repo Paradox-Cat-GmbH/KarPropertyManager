@@ -8,12 +8,6 @@ plugins {
     alias(libs.plugins.jreleaser)
 }
 
-configurations.all {
-    resolutionStrategy {
-        force("org.apache.commons:commons-compress:1.27.1")
-    }
-}
-
 android {
     namespace = "com.paradoxcat.karpropertymanager"
     compileSdk = 35
