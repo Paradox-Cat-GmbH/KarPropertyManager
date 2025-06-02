@@ -8,6 +8,12 @@ plugins {
     alias(libs.plugins.jreleaser)
 }
 
+configurations.all {
+    resolutionStrategy {
+        force("org.apache.commons:commons-compress:1.27.1")
+    }
+}
+
 android {
     namespace = "com.paradoxcat.karpropertymanager"
     compileSdk = 35
@@ -63,12 +69,6 @@ tasks.register<Jar>("dokkaJavadocJar") {
     dependsOn(tasks.dokkaJavadoc)
     from(tasks.dokkaJavadoc.flatMap { it.outputDirectory })
     archiveClassifier.set("javadoc")
-}
-
-configurations.all {
-    resolutionStrategy {
-        force("org.apache.commons:commons-compress:1.21")
-    }
 }
 
 afterEvaluate {
