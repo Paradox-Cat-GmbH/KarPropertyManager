@@ -56,7 +56,7 @@ dependencies {
 }
 
 val releaseVersion: String? by project
-val libVersion = releaseVersion ?: ""
+val libVersion = releaseVersion ?: "v"
 
 tasks.register<Jar>("dokkaJavadocJar") {
     group = JavaBasePlugin.DOCUMENTATION_GROUP
@@ -71,14 +71,21 @@ afterEvaluate {
             register<MavenPublication>("release") {
                 groupId = "com.paradoxcat"
                 artifactId = "karpropertymanager"
-                println("Lib Version: $libVersion")
                 version = libVersion
                 artifact(tasks["dokkaJavadocJar"])
                 pom {
-                    packaging = "aar"
+                    withXml {
+                        asNode().appendNode("plugin").apply {
+                            appendNode("groupId").setValue("com.simpligility.maven.plugins")
+                            appendNode("artifactId").setValue("android-maven-plugin")
+                            appendNode("version").setValue("4.6.0")
+                            appendNode("extensions").setValue("true")
+                        }
+                    }
                     name = "KarPropertyManager"
                     description = "Kotlin wrapper over default Java CarPropertyManager API"
                     url = "https://github.com/Paradox-Cat-GmbH/KarPropertyManager"
+                    packaging = "aar"
                     licenses {
                         license {
                             name = "MIT License"
