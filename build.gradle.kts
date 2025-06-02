@@ -5,3 +5,9 @@ plugins {
     alias(libs.plugins.android.library) apply false
     alias(libs.plugins.jetbrains.dokka) apply false
 }
+
+configurations.all {
+    resolutionStrategy {
+        force("org.apache.commons:commons-compress:1.27.1")
+    }
+}
