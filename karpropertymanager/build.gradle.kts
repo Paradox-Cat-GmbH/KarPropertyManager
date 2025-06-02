@@ -75,11 +75,11 @@ afterEvaluate {
                 artifact(tasks["dokkaJavadocJar"])
                 pom {
                     withXml {
-                        asNode().appendNode("plugin").apply {
-                            appendNode("groupId").setValue("com.simpligility.maven.plugins")
-                            appendNode("artifactId").setValue("android-maven-plugin")
-                            appendNode("version").setValue("4.6.0")
-                            appendNode("extensions").setValue("true")
+                        asNode().appendNode("build").appendNode("plugins").appendNode("plugin").apply {
+                            appendNode("groupId", "com.simpligility.maven.plugins")
+                            appendNode("artifactId", "android-maven-plugin")
+                            appendNode("version", "4.6.0")
+                            appendNode("extensions", "true")
                         }
                     }
                     name = "KarPropertyManager"
