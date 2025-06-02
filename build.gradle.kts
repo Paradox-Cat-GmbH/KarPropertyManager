@@ -6,8 +6,10 @@ plugins {
     alias(libs.plugins.jetbrains.dokka) apply false
 }
 
-configurations.all {
-    resolutionStrategy {
-        force("org.apache.commons:commons-compress:1.27.1")
+allprojects {
+    configurations.all {
+        resolutionStrategy {
+            force("org.apache.commons:commons-compress:1.27.1")
+        }
     }
 }
