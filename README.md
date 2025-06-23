@@ -28,7 +28,7 @@ Add to `libs.versions.toml` file:
 
 ```kotlin
 [versions]
-karPropertyManagerVersion = "0.1.0"
+karPropertyManagerVersion = "0.2.0"
 
 [libraries]
 karpropertymanager = { group = "com.paradoxcat", name = "karpropertymanager", version.ref = "karPropertyManagerVersion" }
