@@ -50,12 +50,14 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.flow.filterIsInstance
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onCompletion
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.shareIn
+import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.withTimeoutOrNull
 import java.util.concurrent.atomic.AtomicBoolean
 
@@ -88,24 +90,28 @@ class KarPropertyManager(
      */
     val carStatusFlow = carStatusFlowInternal.asStateFlow()
 
-    private val carPropertyManagerFlow = callbackFlow {
-        if (Build.VERSION.SDK_INT >= 30) {
-            startObservingCarWithModernApi()
-        } else {
-            startObservingCarWithLegacyApi()
-        }
-    }.onEach { carStatusFlowInternal.value = if (it == null) CarStatus.DISCONNECTED else CarStatus.CONNECTED }
-        .onCompletion { carStatusFlowInternal.value = CarStatus.DISCONNECTED }
-        .map {
-            it?.getCarManager(Car.PROPERTY_SERVICE) as? CarPropertyManager
-        }.shareIn(
-            scope = scope,
-            started = SharingStarted.WhileSubscribed(
-                stopTimeoutMillis = carConnectionRetentionTimeoutMs,
-                replayExpirationMillis = 0
-            ),
-            replay = 1
-        )
+    private val carPropertyManagerFlow =
+        callbackFlow {
+            if (Build.VERSION.SDK_INT >= 30) {
+                startObservingCarWithModernApi()
+            } else {
+                startObservingCarWithLegacyApi()
+            }
+        }.onEach {
+            carStatusFlowInternal.value =
+                if (it == null) CarStatus.DISCONNECTED else CarStatus.CONNECTED
+        }.onCompletion { carStatusFlowInternal.value = CarStatus.DISCONNECTED }
+            .map {
+                it?.getCarManager(Car.PROPERTY_SERVICE) as? CarPropertyManager
+            }.shareIn(
+                scope = scope,
+                started =
+                    SharingStarted.WhileSubscribed(
+                        stopTimeoutMillis = carConnectionRetentionTimeoutMs,
+                        replayExpirationMillis = 0,
+                    ),
+                replay = 1,
+            )
 
     /**
      * Returns a single property value or null on a timeout. Uses property Ids from
@@ -124,12 +130,13 @@ class KarPropertyManager(
         propertyId: Int,
         areaId: Int,
         timeout: Long = CAR_PROPERTY_TIMEOUT_MS,
-    ): KarPropertyValue<T>? = getPropertyValueInternal<T>(propertyId, areaId, timeout)?.let {
-        KarPropertyValue(
-            value = it.value,
-            timestampNs = it.timestamp,
-        )
-    }
+    ): KarPropertyValue<T>? =
+        getPropertyValueInternal<T>(propertyId, areaId, timeout)?.let {
+            KarPropertyValue(
+                value = it.value,
+                timestampNs = it.timestamp,
+            )
+        }
 
     /**
      * Create and return flows for property values and availability. Uses property Ids from [android.car.VehiclePropertyIds].
@@ -152,74 +159,124 @@ class KarPropertyManager(
         propertyId: Int,
         areaId: Int,
         updateRateHz: Float,
-    ): KarProperty<T> = carPropertyManagerFlow
-        .flatMapCloseOnNull { carPropertyManager ->
-            callbackFlow {
-                Log.d(TAG, "getProperty: subscribing to $propertyId")
-                getPropertyValueInternal<T>(propertyId, areaId)?.let(::trySend)
-
-                val listener = object : CarPropertyManager.CarPropertyEventCallback {
-                    override fun onChangeEvent(carPropertyValue: CarPropertyValue<*>?) {
-                        carPropertyValue
-                            ?.takeIf { it.propertyId == propertyId && it.areaId == areaId }
-                            ?.let(::trySend)
-                    }
-
-                    override fun onErrorEvent(
-                        errorPropertyId: Int,
-                        errorAreaId: Int,
-                    ) {
-                        Log.e(TAG, "getProperty: error event on $propertyId")
-                        if (errorPropertyId == propertyId && errorAreaId == areaId) {
-                            trySend(null)
-                        }
-                    }
-                }
-
-                val isSuccess = carPropertyManager.subscribeCompat(
+    ): KarProperty<T> =
+        carPropertyManagerFlow
+            .flatMapCloseOnNull { carPropertyManager ->
+                propertySubscriptionCallbackFlow<T>(
+                    carPropertyManager,
+                    propertyId,
+                    areaId,
+                    updateRateHz,
+                    "getProperty",
+                )
+            }.shareIn(scope, SharingStarted.WhileSubscribed())
+            .let { rawValueFlow ->
+                KarProperty(
                     propertyId = propertyId,
                     areaId = areaId,
-                    updateRateHz = updateRateHz,
-                    listener = listener,
+                    valueFlow =
+                        rawValueFlow
+                            .filterNotNull()
+                            .map {
+                                KarPropertyValue(
+                                    value = it.value as T,
+                                    timestampNs = it.timestamp,
+                                )
+                            },
+                    availabilityFlow =
+                        rawValueFlow.map {
+                            when (it?.propertyStatus) {
+                                CarPropertyValue.STATUS_AVAILABLE -> PropertyAvailability.AVAILABLE
+                                CarPropertyValue.STATUS_UNAVAILABLE -> PropertyAvailability.UNAVAILABLE
+                                else -> PropertyAvailability.ERROR
+                            }
+                        },
                 )
+            }
 
-                if (!isSuccess) {
-                    Log.e(TAG, "getProperty: subscription to property $propertyId unsuccessful")
-                    close(KarPropertyManagerException(SubscriptionUnsuccessfulException()))
+    @Suppress("UNCHECKED_CAST")
+    suspend fun <T> setProperty(
+        propertyId: Int,
+        areaId: Int,
+        value: T,
+        clazz: Class<T>,
+    ): KarPropertyValue<T> =
+        withTimeout(CAR_PROPERTY_TIMEOUT_MS) {
+            carPropertyManagerFlow
+                .flatMapCloseOnNull { carPropertyManager ->
+                    propertySubscriptionCallbackFlow<T>(
+                        carPropertyManager,
+                        propertyId,
+                        areaId,
+                        1f,
+                        "setProperty",
+                    )
+                }.filterNotNull()
+                .map {
+                    if ((it.value as T) == value) {
+                        KarPropertyValue(it.value as T, it.timestamp)
+                    } else {
+                        carPropertyManagerFlow
+                            .filterNotNull()
+                            .first()
+                            .setProperty(clazz, propertyId, areaId, value)
+                    }
+                }.filterIsInstance(KarPropertyValue::class)
+                .first() as KarPropertyValue<T>
+        }
+
+    private fun <T> propertySubscriptionCallbackFlow(
+        carPropertyManager: CarPropertyManager,
+        propertyId: Int,
+        areaId: Int,
+        updateRateHz: Float,
+        logInfo: String = "propertySubscriptionCallbackFlow",
+    ) = callbackFlow {
+        Log.d(TAG, "$logInfo: subscribing to $propertyId")
+        getPropertyValueInternal<T>(propertyId, areaId)?.let(::trySend)
+
+        val listener =
+            object : CarPropertyManager.CarPropertyEventCallback {
+                override fun onChangeEvent(carPropertyValue: CarPropertyValue<*>?) {
+                    carPropertyValue
+                        ?.takeIf { it.propertyId == propertyId && it.areaId == areaId }
+                        ?.let(::trySend)
                 }
 
-                awaitClose {
-                    try {
-                        Log.d(TAG, "getProperty: unsubscribing from $propertyId")
-                        carPropertyManager.unsubscribeCompat(listener)
-                    } catch (_: Exception) {
-                        // carProperty manager can be dead/invalid and can throw whatever and we don't really care
-                        // the car tracking logic will create a new one and the callback flow will initialize again
+                override fun onErrorEvent(
+                    errorPropertyId: Int,
+                    errorAreaId: Int,
+                ) {
+                    Log.e(TAG, "$logInfo: error event on $propertyId")
+                    if (errorPropertyId == propertyId && errorAreaId == areaId) {
+                        trySend(null)
                     }
                 }
             }
-        }.shareIn(scope, SharingStarted.WhileSubscribed())
-        .let { rawValueFlow ->
-            KarProperty(
+
+        val isSuccess =
+            carPropertyManager.subscribeCompat(
                 propertyId = propertyId,
                 areaId = areaId,
-                valueFlow = rawValueFlow
-                    .filterNotNull()
-                    .map {
-                        KarPropertyValue<T>(
-                            value = it.value as T,
-                            timestampNs = it.timestamp,
-                        )
-                    },
-                availabilityFlow = rawValueFlow.map {
-                    when (it?.propertyStatus) {
-                        CarPropertyValue.STATUS_AVAILABLE -> PropertyAvailability.AVAILABLE
-                        CarPropertyValue.STATUS_UNAVAILABLE -> PropertyAvailability.UNAVAILABLE
-                        else -> PropertyAvailability.ERROR
-                    }
-                },
+                updateRateHz = updateRateHz,
+                listener = listener,
             )
+
+        if (!isSuccess) {
+            Log.e(TAG, "$logInfo: subscription to property $propertyId unsuccessful")
+            close(KarPropertyManagerException(SubscriptionUnsuccessfulException()))
         }
+
+        awaitClose {
+            try {
+                Log.d(TAG, "$logInfo: unsubscribing from $propertyId")
+                carPropertyManager.unsubscribeCompat(listener)
+            } catch (_: Exception) {
+                // carProperty manager can be dead/invalid and can throw whatever and we don't really care
+                // the car tracking logic will create a new one and the callback flow will initialize again
+            }
+        }
+    }
 
     private suspend fun <T> getPropertyValueInternal(
         propertyId: Int,
@@ -227,7 +284,10 @@ class KarPropertyManager(
         timeout: Long = CAR_PROPERTY_TIMEOUT_MS,
     ) = withTimeoutOrNull(timeout) {
         try {
-            carPropertyManagerFlow.filterNotNull().map { it.getProperty<T>(propertyId, areaId) }.first()
+            carPropertyManagerFlow
+                .filterNotNull()
+                .map { it.getProperty<T>(propertyId, areaId) }
+                .first()
         } catch (e: CarInternalErrorException) {
             throw KarPropertyManagerException(e)
         } catch (e: PropertyAccessDeniedSecurityException) {
@@ -243,20 +303,21 @@ class KarPropertyManager(
 
     private suspend fun ProducerScope<Car?>.startObservingCarWithModernApi() {
         Log.d(TAG, "creating car with current API")
-        val mainCarInstance = Car.createCar(
-            context,
-            null,
-            CAR_TIMEOUT_MS,
-        ) { car, ready ->
-            if (!ready) {
-                Log.w(TAG, "car is no longer ready, setting to null")
-                trySend(null)
-                return@createCar
-            }
+        val mainCarInstance =
+            Car.createCar(
+                context,
+                null,
+                CAR_TIMEOUT_MS,
+            ) { car, ready ->
+                if (!ready) {
+                    Log.w(TAG, "car is no longer ready, setting to null")
+                    trySend(null)
+                    return@createCar
+                }
 
-            Log.d(TAG, "car is ready, pushing it further")
-            trySend(car)
-        }
+                Log.d(TAG, "car is ready, pushing it further")
+                trySend(car)
+            }
 
         awaitClose {
             Log.d(TAG, "modernServiceConnection: disconnecting from car")
@@ -265,31 +326,32 @@ class KarPropertyManager(
     }
 
     private suspend fun ProducerScope<Car?>.startObservingCarWithLegacyApi() {
-        val serviceConnection = object : ServiceConnection {
-            lateinit var car: Car
-            val stop: AtomicBoolean = AtomicBoolean(false)
+        val serviceConnection =
+            object : ServiceConnection {
+                lateinit var car: Car
+                val stop: AtomicBoolean = AtomicBoolean(false)
 
-            override fun onServiceConnected(
-                componentName: ComponentName?,
-                binder: IBinder?,
-            ) {
-                Log.d(TAG, "Car Service connected, emitting car")
-                trySend(car)
-            }
+                override fun onServiceConnected(
+                    componentName: ComponentName?,
+                    binder: IBinder?,
+                ) {
+                    Log.d(TAG, "Car Service connected, emitting car")
+                    trySend(car)
+                }
 
-            override fun onServiceDisconnected(componentName: ComponentName?) {
-                Log.d(TAG, "Car Service disconnected, emitting null, requesting new car")
-                trySend(null)
-                if (!stop.get()) {
-                    try {
-                        @Suppress("DEPRECATION")
-                        car.connect()
-                    } catch (e: IllegalArgumentException) {
-                        Log.e(TAG, "Exception during connect", e)
+                override fun onServiceDisconnected(componentName: ComponentName?) {
+                    Log.d(TAG, "Car Service disconnected, emitting null, requesting new car")
+                    trySend(null)
+                    if (!stop.get()) {
+                        try {
+                            @Suppress("DEPRECATION")
+                            car.connect()
+                        } catch (e: IllegalArgumentException) {
+                            Log.e(TAG, "Exception during connect", e)
+                        }
                     }
                 }
             }
-        }
         Log.d(TAG, "creating car with legacy API")
 
         @Suppress("DEPRECATION")
