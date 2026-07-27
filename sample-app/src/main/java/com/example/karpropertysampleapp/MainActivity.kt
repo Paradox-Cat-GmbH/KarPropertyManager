@@ -103,7 +103,7 @@ class MainActivity : ComponentActivity() {
                     if (permissionsGranted && subscribed) {
                         kpm
                             .getProperty<Float>(
-                                VehiclePropertyIds.HVAC_TEMPERATURE_DISPLAY_UNITS,
+                                VehiclePropertyIds.HVAC_TEMPERATURE_SET,
                                 0,
                                 60F,
                             ).valueFlow
@@ -112,6 +112,7 @@ class MainActivity : ComponentActivity() {
                     }
                 }
 
+            val temperature by temperatureFlow.collectAsState(initial = null)
             var temperatureInput by remember { mutableStateOf("") }
 
             KarPropertySampleAppTheme {
@@ -126,6 +127,7 @@ class MainActivity : ComponentActivity() {
                     ) {
                         if (subscribed) {
                             Text("Speed: $speed")
+                            Text("Temperature: $temperature")
                         } else {
                             Text("Not subscribed")
                         }
