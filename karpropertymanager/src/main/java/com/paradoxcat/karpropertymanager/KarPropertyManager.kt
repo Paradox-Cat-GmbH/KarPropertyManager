@@ -276,7 +276,7 @@ class KarPropertyManager(
                 // the car tracking logic will create a new one and the callback flow will initialize again
             }
         }
-    }
+    }.shareIn(scope, SharingStarted.WhileSubscribed())
 
     private suspend fun <T> getPropertyValueInternal(
         propertyId: Int,
