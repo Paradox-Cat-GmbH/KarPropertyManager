@@ -157,12 +157,12 @@ class MainActivity : ComponentActivity() {
 
     private fun requestPermission() {
         if (checkSelfPermission(Car.PERMISSION_SPEED) != PackageManager.PERMISSION_GRANTED ||
-            checkSelfPermission(Car.PERMISSION_CONTROL_CAR_ENERGY) != PackageManager.PERMISSION_GRANTED
+            checkSelfPermission(PERMISSION_CONTROL_CAR_CLIMATE) != PackageManager.PERMISSION_GRANTED
         ) {
             requestPermissionLauncher.launch(
                 arrayOf(
                     Car.PERMISSION_SPEED,
-                    Car.PERMISSION_CONTROL_CAR_ENERGY,
+                    PERMISSION_CONTROL_CAR_CLIMATE,
                 ),
             )
         } else {
@@ -172,5 +172,6 @@ class MainActivity : ComponentActivity() {
 
     companion object {
         const val TAG = "SampleApp"
+        const val PERMISSION_CONTROL_CAR_CLIMATE = "android.car.permission.CONTROL_CAR_CLIMATE"
     }
 }
